@@ -1,0 +1,464 @@
+---
+title: "CEE 377"
+author: "Maher Said"
+date: "`r format(Sys.time(), '%Y-%m-%d')`"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+# Libraries
+
+Typically, all libraries are loaded first as best practice. Here, however, we're loading them where relevant so that you get an idea of where the functions from different libraries apply. The libraries we will use are:
+
+* `devtools`
+* `plyr`
+* `tidyverse`
+* `dlookr`
+* `prettyR`
+* `corrplot`
+* `FactoMineR`
+* `nFactors`
+* `lavaan`
+* `lavaanPlot`
+
+We will also use one more package that is not available to download from the R repository:
+
+* `ggbiplot`
+
+We will download it instead from *github* as such:
+```{r, eval = FALSE}
+library(devtools)
+install_github("vqv/ggbiplot")
+library(plyr)
+```
+
+This might take a minute or two.
+
+# Early exploration
+Let's load `tidyverse` first. It's a must toolset in R for data manipulation.
+
+For more, check out: https://github.com/MaherSaid/ntc-workshop-tidyverse-workflow
+
+```{r Libraries}
+library(tidyverse)
+```
+
+Now load the data. The data is in a serialized R format (`.rds`) which means it contains an R dataframe *as is* without any conversion (like to and from `.csv`).
+
+```{r Loading Data}
+df = readRDS("CEE377_STUDENT_HOMEWORK.rds")
+df <- na.omit(df)
+```
+
+# Early exploration
+
+First step of any project is to familiarize yourself with the data.
+
+This dataset has multiple levels (remember, it came from an RDS file not CSV, meaning it can have lists, factors, etc). Since we're not yet familiar with the data, let's just look at the highest level of the dataframe using `max.level=1`.
+```{r}
+str(df, max.level=1)
+```
+
+We should also look at the first few rows to better understand the format of the dataframe.
+
+```{r}
+head(df)
+```
+
+Multiple packages have the function `describe()` which basically... describes the dataframe (counts, means, etc.). We're going to use `describe()` from `dlookr`, but we're not going to load the library since we're only using a single function once (to avoid conflicts as will be demonstrated below). Instead, we call the function using the syntax `library::function()`.
+
+```{r}
+dlookr::describe(df)
+```
+
+If you look at the described variables, you notice variables like `ethnicity` and `gender` missing. That's because those variables are categorical and `dlookr::describe()` doesn't handle categorical variables (or *factors*). For more on factors, go to: https://r4ds.had.co.nz/factors.html
+
+Instead, we're going to use another `describe()` function from `prettyR()`. You can also see now that had we loaded the two libraries, we would have had a conflict due to two `describe()` functions. So, as before, we use the function without loading the library as `prettyR::describe()`.
+
+Here you'll also see the first use of **pipes** (`%>%`). The concept of piping is that you can chain functions to one another without having to (1) create a variable for every step and/or (2) ending up with illegibly messy code.
+
+`%>%` passes an element as the **FIRST** parameter to the next function in line. In other words, `some_variable %>% round(2)` is the equivalent of `round(some_variable, 2)`. The way I like to describe `%>%` is by "**then**". In the rounding example, we took `some_variable` *then* we rounded it.
+
+Below, we will take `df`, *then* we will `select()` variables that are factors, then we will `describe()` those variables.
+
+```{r}
+df %>%
+	select(where(is.factor)) %>%
+	prettyR::describe()
+```
+
+You can see that for factors, the descriptions focus on counts instead of statistics more relevant to numeric variables (mean, sd, etc.)
+
+### Plotting
+
+Plotting is a must for early exploration. Since we're focused on the indicators, let's start getting an idea of what the response distributions look like for each. If wel just `plot()` the indicators directly, we won't get anything very useful.
+
+```{r}
+plot(df$indic_tech1)
+```
+
+The figure above plots a point for the response of each respondent. While we can extract some information from above (such as most responses being *4*), let's do a proper barchart.
+
+First, get a frequency `table()` for the indicator.
+
+```{r}
+table(df$indic_tech1)
+```
+
+Now plot that instead... and let's do it for all indicators. `R Markdown` (which we're using right now!) does a pretty nice job at handling lots of printed figures at once.
+
+```{r}
+plot(table(df$indic_tech1))
+plot(table(df$indic_tech2))
+plot(table(df$indic_tech3))
+plot(table(df$indic_tech4))
+
+plot(table(df$indic_pack1))
+plot(table(df$indic_pack2))
+plot(table(df$indic_pack3))
+plot(table(df$indic_pack4))
+
+plot(table(df$indic_envr1))
+plot(table(df$indic_envr2))
+plot(table(df$indic_envr3))
+plot(table(df$indic_envr4))
+```
+
+This is much better!
+
+#### Plotting (advanced)
+
+Those plots are informative, but suffer from two issues in my opinion:
+
+1. What if you had 1,000 indicators? 10,000? ... or more? It's good practice to write code that scales nicely.
+2. Those plots are 🤮.
+
+For the novice in `R`, feel free to skip this section, but do admire the nicer plots as you scroll to the next section.
+
+For those who stay, just note that you can run the code to any point in the *chain* to inspect what each line is doing.
+
+```{r}
+# advanced
+df %>%									# let's take the dataframe `df`
+	select(indic_tech1:indic_envr4) %>%	# select the columns from `indic_tech1` to `indic_envr4`
+	pivot_longer(everything()) %>%		# pivot the data to a long format (compatible with ggplot)
+	count(name, value) %>%				# get the count/frequency of every name (indicator) and value pair
+	
+	ggplot(aes(x = value, y = n)) +		# initiate ggplot with `x = value` and `y = n`
+		geom_bar(stat='identity') +		# draw a barplot (`stat='identity'` tells `geom_bar()` to use our specified `y` variable)
+		facet_wrap(~name)				# create a "window" for every indicator
+```
+
+```{r}
+# more advanced
+df %>%
+	select(indic_tech1:indic_envr4) %>%
+	pivot_longer(everything()) %>%
+	count(name, value) %>%
+	mutate(category = str_extract(name, "_.*"),			# extract any text (.*) after the underscore (inclusive)
+		   category = str_sub(category, 2, 5)) %>%		# take only the 2nd to 5th character (removes the _ and number)
+	
+	ggplot(aes(x = value, y = n, fill = category)) +	# now let's also color the plots based on `category` that we just created
+		geom_bar(stat='identity') +
+		facet_wrap(~name) +
+		theme_bw()										# ... and we make our plots less 🤮 by using a nicer theme
+```
+
+#### Back to more basic plotting
+
+You should also experiment with plots for other variables in the dataset to get familiarized with them. Here's a few examples. Notice the different approach for continuous and categorical data.
+
+```{r}
+hist(df$age)
+hist(df$hh_income)
+
+plot(table(df$ethnicity))
+```
+
+
+
+# Correlelograms
+
+`corrplot` is a *great* library for correlelograms and another very important tool for your second stage of exploration.
+
+```{r}
+library(corrplot)
+library(polycor)
+```
+
+`typical_mode_of_travel` is of type `list`, which is messy to deal with, so let's remove it from the dataframe for now. Elisa already taught you how to create dummy variables, but we're not going to do that today.
+
+```{r}
+df = df %>%
+	select(-typical_mode_of_travel)
+```
+
+Remember how we have categorical variables? Well.. you can't really get the correlations between `gender` and `age` the same way you would between `age` and `income`. What even is the correlation between `male` and `35 years old`? We're not going to dive into the details of how to achieve this, just know that R has you covered.
+
+The function `hetcor()` from `polycor` can handle any type of correlation (continuous-continuous, continuous-categorical, categorical-categorical) automagically.
+
+Two things we want to be aware of. First, we don't want to measure correlation with the column `id` as that would be spurious. Also, we have a few observations missing in `hh_income`, so we want to select the option `use = "pairwise.complete.obs"` so that the correlation is only calculated across complete pairs (and doesn't throw out an error... `hetcor()` is *really* verbose about errors).
+
+We will then pull the correlation values from the `hetcor` object and save them to `cor.mat.vals`.
+
+```{r}
+cor.mat = df %>%
+	select(-id) %>%
+	hetcor(use = "pairwise.complete.obs")
+
+cor.mat.vals = cor.mat$correlations
+
+print(cor.mat.vals)
+```
+
+We can now pass `cor.mat.vals` to `corrplot()` for some really nice plots.
+
+```{r, fig.width=10, fig.height=10}
+corrplot(cor.mat.vals)
+corrplot(cor.mat.vals, type="upper", order="hclust")
+corrplot(cor.mat.vals, order="hclust", addrect = 9)
+corrplot.mixed(cor.mat.vals, tl.pos = "lt")
+```
+
+
+#### Advanced `corrplot()`
+
+For the faint of heart, feel free to move to the next section.
+
+For the brave 💪 , here's the deal. Correlations, like almost anything in statistcs, can be insignificant. I'm sure you still remember your STAT 101, so let's do some manual labor.
+
+We're going to:
+
+1. pull the standard errors from our `hetcor` object
+2. get the tstat by deviding the correlation by the standard error
+3. get the pvalue using `pt()` (our sample size is large enough to not worry about the math for degrees of freedom)
+4. pass that info to `corrplot()`
+
+Much nicer, yea?
+
+```{r, fig.width=10, fig.height=10}
+# advanced
+cor.mat.std = cor.mat$std.err
+cor.mat.tstat = cor.mat.vals/cor.mat.std
+cor.mat.pval = 2*pt(cor.mat.tstat, df=Inf, lower=FALSE)
+
+corrplot(cor.mat.vals, order="hclust", addrect = 9, p.mat = cor.mat.pval, sig.level = 0.05)
+corrplot(cor.mat.vals, order="hclust", addrect = 9, p.mat = cor.mat.pval, sig.level = 0.05, insig="blank", diag=FALSE)
+```
+
+# Principal Component Analysis
+
+![Source: Jeroen Boeye, DataCamp](datacamp_pca_intuition.png)
+
+We will run PCA on our 12 indicators. While our indicators have similar scales, it is good practice to always scale your variables before they go into PCA otherwise you will get erronous results (especially in cases where scales could really differ, like mass vs. height).
+
+```{r}
+df.indic = df %>%
+	select(indic_tech1:indic_tech4)
+
+pcomp.mat = df.indic %>%
+	prcomp(center = TRUE, scale. = TRUE)
+
+print(pcomp.mat)	# shows the loadings
+
+summary(pcomp.mat)	# shows summary statistics
+```
+
+12 components are... alot! Actually, you'll get as many components as there are variables. How is this dimensionality reduction though? The reduction is due to the fact that not all of these 12 components are equally important. What we want is to use the components that explain as much of the variance in our data. Conveniently, `summary()` outputs this information for us.
+
+Let's visualize this. First, let's look at how to pull the data from `summary(pcomp.mat)` using `str()`. A quarer from the bottom, we can see that the importance information is stored in `summary(pcomp.mat)$importance`.
+
+```{r}
+str(summary(pcomp.mat))
+```
+
+The first row in `importance` gives us the standard deviation, so let's square that to get the variance.
+
+```{r}
+summary(pcomp.mat)$importance[1,]^2 %>%
+	plot(type="b", col="green4", lwd=2, xlab="PC", ylab="variance")
+```
+
+While traditionally people look at the varaince plot, I find *importance* (or *proportion of variance* more intuitive), so let's look at that. Notice that the first 4 principal components alone explain ~60% of the variance among these 12 indicators?
+
+```{r}
+summary(pcomp.mat)$importance[2,] %>%
+	plot(type="b", col="red", lwd=2, xlab="PC", ylab="importance")
+
+summary(pcomp.mat)$importance[3,] %>%
+	plot(type="b", col="royalblue", lwd=2, xlab="PC", ylab="cumulative importance")
+```
+
+Should've told you that you could have just used `screeplot()`... but now you know how to extract data from objects!
+
+```{r}
+screeplot(pcomp.mat, type="lines", npcs=ncol(df.indic))
+```
+
+## Visualizing PCA
+
+A way to visualize PCA is to create `biplots()`. These plots show you the principal components (the vectors) along with your data on the 2D plane created by every PC-pair. Here's an example below.
+
+```{r, fig.width=10, fig.height=10}
+biplot(pcomp.mat)
+```
+
+Doesn't make much sense, does it?
+
+Let's use `ggbiplot` to plot the biplot instead. This plot does provide us with a bit extra information (explained variance) and nicer graphics... but there's still a lot going on.
+
+```{r, fig.width=10, fig.height=10}
+library(ggbiplot)
+ggbiplot(pcomp.mat)
+```
+
+Let's go through PCA with a smaller dataset. Let's take just 3 indicators out of the 12 and work on them instead.
+
+```{r}
+pcomp.mat.trunc = df %>%
+	select(indic_tech1:indic_tech3) %>%
+	prcomp(center = TRUE, scale. = TRUE)
+
+print(pcomp.mat.trunc)
+summary(pcomp.mat.trunc)
+ggbiplot(pcomp.mat.trunc)
+```
+
+The above grid looks cleaner, but it's still a bunch of random dots. If we look at PC1 and PC3 instead though, we see some order emerging from this noise.
+
+```{r}
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,3))
+```
+
+Let's add colors and... this now makes more sense. Look at how the principal component for each indicator points in the direction of the color gradient and along the ellipses.
+
+```{r}
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,3), groups=df$indic_tech1)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,3), groups=df$indic_tech2)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,3), groups=df$indic_tech3)
+```
+
+We can now also see that for the earlier PC1-PC2 plot.
+
+```{r}
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,2), groups=df$indic_tech1)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,2), groups=df$indic_tech2)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(1,2), groups=df$indic_tech3)
+```
+
+... and PC2-PC3.
+
+```{r}
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(2,3), groups=df$indic_tech1)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(2,3), groups=df$indic_tech2)
+ggbiplot(pcomp.mat.trunc, ellipse=TRUE, choices=c(2,3), groups=df$indic_tech3)
+```
+
+If we go back to our earlier PCA with 12 indicators, we can now visualize and understand what's happening too.
+
+```{r, fig.width=10, fig.height=10}
+ggbiplot(pcomp.mat, ellipse=TRUE, choices=c(1,2), groups=df$indic_envr1)
+```
+
+## Extracting more info from PCA
+
+It's easy to extract the Eigen value from our `pcomp.mat` manually as below (just square the standard deviation values).
+
+```{r}
+# eigen value manually
+pcomp.mat$sdev^2
+```
+
+... or you use `FactoMineR` which does that for you and provides some more information.
+
+```{r}
+library(FactoMineR)
+pcomp.fmr = df.indic %>%
+	PCA(scale.unit=TRUE, ncp=ncol(df.indic))
+
+pcomp.fmr$eig				# eigen value
+head(pcomp.fmr$ind$coord)	# PC scores
+pcomp.fmr$var$coord			# correlations between variables and PCs
+
+```
+
+## Screeplots (advanced)
+
+With the library `nFactors`, we can get a more advanced screeplot to decide on the number of principal components that we want to use (and in the sections below, the number of factors in factor analysis).
+
+Run the code below.
+
+```{r}
+library(nFactors)
+ev = eigen(hetcor(df.indic, use = "pairwise.complete.obs")$correlations)
+ap = parallel(subject=nrow(df.indic), var=ncol(df.indic), rep=100, cent=.05)
+nS = nScree(x=ev$values, aparallel=ap$eigen$qevpea)
+plot(nS)
+```
+
+As you can see in the plot, `nScree` uses four methods to determine the best number of components/factors. The four values do not have to agree. Here, it seems like 3 or 4 are the values to choose.
+
+For more on this and the details for each method, check out `?nScree`.
+
+
+# Exploratory Factor Analysis
+
+Exploratory factor analysis (EFA) is  the close cousin of PCA. Instead, here, you provide the number of factors and the indicators will be grouped across the factors. Let's start with 4 factors following our scree plot above. We're use a `"promax"` rotation. Refer to `?factanal` or your course notes for a discussion on `rotation`.
+
+```{r}
+efa = factanal(df.indic, 4, rotation="promax")
+print(efa)
+```
+
+You can see how our indicators are sorting themselves out across groups above. Don't be tricked though! This is only because the `print()` method for `factanal()` has a default cutoff of 0.10. Let's remove the cutoff to see our real results.
+```{r}
+print(efa, cutoff = 0)
+```
+
+Cutoffs are not bad though. They allow us to identify proper groupings as very small loadings are noisy. Let's actually use a higher (good practice) cutoff of 0.3.
+
+```{r}
+print(efa, cutoff = 0.3)
+```
+
+The `indic_tech` and `indic_pack` indicators seem to group up with each other quite nicely. `indic_tech` variables are a bit problematic. First, we don't want factors with a single indicators because that doesn't help in reducing dimensionality or in adding much explanation to a latent variable. Factors with only 2 indicators are also discouraged (try to have at least 3).
+
+Let's run an EFA with 3 factors.
+
+```{r}
+efa = factanal(df.indic, 3, rotation="promax")
+print(efa, cutoff = 0.3)
+```
+
+This looks much better. We have 3 factors, one for each of `tech`, `envr` and `pack`. It's fine if we don't get to use all indicators (it's why we collect many of them).
+
+
+# Confirmatory Factor Analysis
+
+Remember how in EFA we implement a printing cutoff so we can more easily identify which indicators should be place under which factors? In the process of obfuscating information we could be making erroneous conclusions. That's what CFA is for. Here, instead, we place the indicators within the factors we determined they belong to and test to see if the loadings are significant and if the model has good fit.
+
+We're using `lavaan`, a very powerful (and well documented!) package for CFA (and down the line, *structural equation modeling*). For more on `lavaan`, check out: https://lavaan.ugent.be/tutorial/index.html
+
+Below, we test our construct from the above EFA analysis we just did. All loadings are significant! What else do you find interesting in this model?
+
+```{r}
+library(lavaan)
+model = "
+	tech =~ indic_tech1 + indic_tech2 + indic_tech3
+	pack =~ indic_pack2 + indic_pack3 + indic_pack4
+	envr =~ indic_envr1 + indic_envr2 + indic_envr3 + indic_envr4
+"
+cfa = cfa(model, df.indic)
+summary(cfa, fit.measures=TRUE)
+```
+
+As a final bonus step, we can plot our CFA model using the package `lavaanPlot`.
+
+```{r}
+lavaanPlot::lavaanPlot(model = cfa, coefs = TRUE)
+```
+
+Congratulations! You should now be able to do exploratory analysis and dimensionality reduction on your own. 🎉
