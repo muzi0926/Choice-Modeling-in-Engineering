@@ -1,14 +1,3 @@
----
-title: "CEE 377"
-author: "Maher Said"
-date: "`r format(Sys.time(), '%Y-%m-%d')`"
-output:
-  html_document:
-    df_print: paged
-editor_options:
-  chunk_output_type: inline
----
-
 # Libraries
 
 Typically, all libraries are loaded first as best practice. Here, however, we're loading them where relevant so that you get an idea of where the functions from different libraries apply. The libraries we will use are:
