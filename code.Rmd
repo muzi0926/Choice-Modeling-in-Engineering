@@ -1,0 +1,457 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+rm(list=ls())
+setwd("C:/Users/Steven SHI/Desktop/capstone")
+df<-read.csv('Questionnaire dataset.csv')
+library(tidyverse)
+library(FactoMineR)
+#install.packages('factoextra')
+library('factoextra')
+```
+
+
+```{r Data clearance}
+df1<-filter(df,X1affiliation!='d. Other')
+n= which(df1$X11mode_primary=='c. Car' & df1$X19own_car=='No')
+df1<-df1[-n,]
+m= which(df1$X11mode_primary=='d. Bike' & df1$X20own_bike=='No' )
+df1<-df1[-m,]
+```
+
+
+```{r Data lable}
+
+#Q1
+df1$X1affiliation[which(df1$X1affiliation=='a. Undergraduate')]<-1
+df1$X1affiliation[which(df1$X1affiliation=='b. Master')]<-2
+df1$X1affiliation[which(df1$X1affiliation=='c. PHD')]<-3
+#Q2
+df1$X2satisfaction[which(df1$X2satisfaction=='a. Satisfied')]<-4
+df1$X2satisfaction[which(df1$X2satisfaction=='b. Neither satisfied nor dissatisfied')]<-3
+df1$X2satisfaction[which(df1$X2satisfaction=='c. Dissatisfied')]<-2
+df1$X2satisfaction[which(df1$X2satisfaction=='d. I rarely take NU Campus shuttles')]<-1
+
+
+#4
+df1$X4attitude_bike[which(df1$X4attitude_bike=='a. I oppose it')]<-1
+df1$X4attitude_bike[which(df1$X4attitude_bike=='c. I am neutral about it')]<-2
+df1$X4attitude_bike[which(df1$X4attitude_bike=='e. I agree it')]<-3
+df1$X4attitude_bike[which(df1$X4attitude_bike=='f. I don?€?t know')]<-0
+
+#5
+df1$X5attitude_lane[which(df1$X5attitude_lane=='a. Uncomfortable')]<-0
+df1$X5attitude_lane[which(df1$X5attitude_lane=='b. Comfortable')]<-1
+
+#6
+df1$X6attitude_Nubike[which(df1$X6attitude_Nubike=='a. I oppose it')]<-1
+df1$X6attitude_Nubike[which(df1$X6attitude_Nubike=='c. I am neutral about it')]<-2
+df1$X6attitude_Nubike[which(df1$X6attitude_Nubike=='d. I support it')]<-3
+df1$X6attitude_Nubike[which(df1$X6attitude_Nubike=='f. I don?€?t know')]<-0
+
+#7
+df1$X7usage[which(df1$X7usage=='a. 3 or more times per week.')]<-3
+df1$X7usage[which(df1$X7usage=='b. About 1 - 2 times per week.')]<-2
+df1$X7usage[which(df1$X7usage=='c. Less than 1 time per week.')]<-1
+
+#8
+df1$X8attitude_NUbike1[which(df1$X8attitude_NUbike1=='a. I oppose it.')]<-1
+df1$X8attitude_NUbike1[which(df1$X8attitude_NUbike1=='c. I am neutral about it.')]<-2
+df1$X8attitude_NUbike1[which(df1$X8attitude_NUbike1=='d. I agree with it.')]<-3
+df1$X8attitude_NUbike1[which(df1$X8attitude_NUbike1=='f. I don?€?t know.')]<- 0
+
+#9
+df1$X9mode[which(df1$X9mode=='a. Walk to bus station and take campus shuttle to school.')]<-1
+df1$X9mode[which(df1$X9mode=='b. Take bicycle to the closest shuttle station, then take campus shuttle to school.')]<-2
+df1$X9mode[which(df1$X9mode=='c. Take shared bike to campus.')]<-3
+df1$X9mode[which(df1$X9mode=='d. Other commuting mode.')]<-4
+
+#10
+df1$X10dock[which(df1$X10dock=='A')]<-1
+df1$X10dock[which(df1$X10dock=='B')]<-2
+df1$X10dock[which(df1$X10dock=='C')]<-3
+df1$X10dock[which(df1$X10dock=='D')]<-4
+df1$X10dock[which(df1$X10dock=='E')]<-5
+df1$X10dock[which(df1$X10dock=='F')]<-6
+df1$X10dock[which(df1$X10dock=='G')]<-7
+df1$X10dock[which(df1$X10dock=='H')]<-8
+df1$X10dock[which(df1$X10dock=='I')]<-9
+df1$X10dock[which(df1$X10dock=='None of them')]<-0
+
+#11
+df1$X11mode_primary [which(df1$X11mode_primary =='a. Walking')]<-1
+df1$X11mode_primary [which(df1$X11mode_primary =='b. Campus shuttle/ bus')]<-2
+df1$X11mode_primary [which(df1$X11mode_primary =='c. Car')]<-3
+df1$X11mode_primary [which(df1$X11mode_primary =='d. Bike')]<-4
+df1$X11mode_primary [which(df1$X11mode_primary =='e. Skate, skateboard, or scooter')]<-5
+df1$X11mode_primary [which(df1$X11mode_primary =='f. I attend class on zoom')]<-6
+
+
+#12
+df1$X12time_home_stop[which(df1$X12time_home_stop=='a. I am unwilling to walk.')]<-1
+df1$X12time_home_stop[which(df1$X12time_home_stop=='b. Less than 5 minutes')]<-2
+df1$X12time_home_stop[which(df1$X12time_home_stop=='c. 5 ?€? 10 minutes')]<-3
+df1$X12time_home_stop[which(df1$X12time_home_stop=='d. 11 ?€? 15 minutes')]<-4
+df1$X12time_home_stop[which(df1$X12time_home_stop=='e. More than 15 minutes')]<-5
+
+#13
+df1$X13usage_bike[which(df1$X13usage_bike=='Yes')]<-1
+df1$X13usage_bike[which(df1$X13usage_bike=='No')]<-0
+
+#14
+df1$X14usage_shared.bike[which(df1$X14usage_shared.bike =='Yes')]<-1
+df1$X14usage_shared.bike[which(df1$X14usage_shared.bike =='No')]<-0
+
+#15
+df1$X15way_stop[which(df1$X15way_stop=='a. Walking')]<-1
+df1$X15way_stop[which(df1$X15way_stop=='b. Taking a bike')]<-2
+df1$X15way_stop[which(df1$X15way_stop=='C. Other')]<-3
+
+#16
+df1$X16Mdis_walk[which(df1$X16Mdis_walk=='0.25 mile')]<-1
+df1$X16Mdis_walk[which(df1$X16Mdis_walk=='0.5 mile')]<-2
+df1$X16Mdis_walk[which(df1$X16Mdis_walk=='0.75 mile')]<-3
+df1$X16Mdis_walk[which(df1$X16Mdis_walk=='1 mile')]<-4
+df1$X16Mdis_walk[which(df1$X16Mdis_walk=='More than 1 mile')]<-5
+
+#17
+df1$X17Mdis_ride[which(df1$X17Mdis_ride=='0.5 mile')]<-1
+df1$X17Mdis_ride[which(df1$X17Mdis_ride=='1 mile')]<-2
+df1$X17Mdis_ride[which(df1$X17Mdis_ride=='1.5 miles')]<-3
+df1$X17Mdis_ride[which(df1$X17Mdis_ride=='2 miles')]<-4
+df1$X17Mdis_ride[which(df1$X17Mdis_ride=='More than 2 miles')]<-5
+
+#18
+df1$X18Mtime_commute[which(df1$X18Mtime_commute=='a. Less than 10 minutes')]<-1
+df1$X18Mtime_commute[which(df1$X18Mtime_commute=='b. 10 ?€? 20 minutes')]<-2
+df1$X18Mtime_commute[which(df1$X18Mtime_commute=='c. 20 ?€? 30 minutes')]<-3
+df1$X18Mtime_commute[which(df1$X18Mtime_commute=='d. More than 30 minutes')]<-4
+
+#19
+df1$X19own_car[which(df1$X19own_car=='Yes')]<-1
+df1$X19own_car[which(df1$X19own_car=='No')]<-0
+
+#20
+df1$X20own_bike[which(df1$X20own_bike=='Yes')]<-1
+df1$X20own_bike[which(df1$X20own_bike=='No')]<-0
+
+#21
+df1$X21age[which(df1$X21age=='<18')]<-1
+df1$X21age[which(df1$X21age=='b. 18-22')]<-2
+df1$X21age[which(df1$X21age=='c. 22-25')]<-3
+df1$X21age[which(df1$X21age=='d. More than 25')]<-4
+
+#22
+df1$X22gender[which(df1$X22gender=='Male')]<-1
+df1$X22gender[which(df1$X22gender=='Female')]<-0
+```
+
+
+```{r Data lable}
+#3#############
+
+num <- function(data) {
+    strings <- strsplit(data, ";")[[1]]
+    if (length(strings) == 1 && strings[1] == "I think Campus Shuttle is good enough") {
+        return(0)
+    } else {
+        # check there is no "I think Campus Shuttle is good enough" in the string
+        for (i in 1:length(strings)) {
+            if (strings[i] == "I think Campus Shuttle is good enough") {
+                return (length(strings) - 1)
+            }
+        }
+        return(length(strings))
+    }
+}
+
+# use for loop to calculate the number of options
+for (i in 1:nrow(df1)) {
+    df1[i, 3] <- num(df1[i, 3])
+}
+```
+
+
+```{r PCA}
+df2<- select(df1,-X9mode,-X10dock,-X14usage_shared.bike)
+df2<-na.omit(df2)
+write.csv(df2,'C:/Users/Steven SHI/Desktop/capstone/dataset.csv')
+df3<-read.csv('C:/Users/Steven SHI/Desktop/capstone/dataset.csv')
+which(apply(df3,2,var)==0)
+df4<-df3[ , which(apply(df3, 2, var) != 0)]
+df4<-select(df4,-X)
+pcomp.mat = df4 %>% 
+  prcomp(center = TRUE, scale. = TRUE, rank=19)
+print(pcomp.mat)
+summary(pcomp.mat)
+```
+
+
+```{r PCA variance}
+summary(pcomp.mat)$importance[1,]^2 %>%
+	plot(type="b", col="green4", lwd=2, xlab="PC", ylab="variance")
+```
+
+
+```{r PCA variance}
+summary(pcomp.mat)$importance[3,] %>%
+	plot(type="b", col="royalblue", lwd=2, xlab="PC", ylab="cumulative importance")
+```
+
+
+```{r PCA variance selection}
+pcomp.fmr = df4 %>%
+	PCA(scale.unit=TRUE, ncp=ncol(df4))
+
+pcomp.fmr$eig				# eigen value
+head(pcomp.fmr$ind$coord)	# PC scores
+pcomp.fmr$var$coord			# correlations between variables and PCs
+```
+
+
+```{r PCA variance selection}
+#res.pca <- PCA(df4, graph = FALSE)
+fviz_contrib(pcomp.fmr, choice = "var", axes = 1, top = 7) 
+fviz_contrib(pcomp.fmr, choice = "var", axes = 2, top = 9)
+fviz_contrib(pcomp.fmr, choice = "var", axes = 3, top = 7)
+fviz_contrib(pcomp.fmr, choice = "var", axes = 4, top = 7)
+fviz_contrib(pcomp.fmr, choice = "var", axes = 5, top = 7)
+fviz_contrib(pcomp.fmr, choice = "var", axes = 6, top = 7)
+```
+
+
+```{r PCA variance selection}
+fviz_pca_var(pcomp.fmr, col.var = "contrib",              
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07") 
+             )
+```
+
+
+```{r model analysis}
+### Install Apollo 
+if(!suppressPackageStartupMessages(require('apollo')))	install.packages('apollo')
+
+### Load Apollo library
+library(apollo)
+
+### Initialize code
+apollo_initialise()
+
+### Set core controls
+apollo_control = list(
+  modelName ="Capstone",
+  modelDescr ="Binary logit model on bike-sharing",
+  indivID   ="INDIV_ID" #, #Uncomment comma for random parameter model  
+  #mixing    = TRUE, #Uncomment line for random parameter model
+  #nCores    = 3 #Uncomment line for random parameter model
+)
+
+#df4$PC1_SB = (df4$X8attitude_NUbike1+df4$X7usage +df4$X19own_car+ df4$X6attitude_Nubike +df4$X4attitude_bike +df4$X15way_stop +df4$X11mode_primary)/7
+#df4$PC2_PC =(df4$X12time_home_stop +df4$X2satisfaction+df4$X17Mdis_ride +df4$X18Mtime_commute +df4$X5attitude_lane +df4$X1affiliation +df4$X13usage_bike +df4$X21age)/8 #12,2,17,18,5,1,13,21
+#df4$PC3_BH =(df4$X20own_bike+df4$X13usage_bike+df4$X16Mdis_walk+df4$X11mode_primary)/4  #20,13,16,11
+#df4$PC4_GD =(df4$X20own_bike+df4$X17Mdis_ride+df4$X16Mdis_walk+df4$X4attitude_bike+df4$X6attitude_Nubike)/5#20,17,16,4,6
+#df4$PC5_SR =(df4$X21age+df4$X1affiliation+df4$X12time_home_stop)/3 #21,1,12
+#df4$PC6_CS =(df4$X18Mtime_commute+df4$X2satisfaction+df4$X5attitude_lane +df4$X15way_stop +df4$X12time_home_stop )/5 #18,2,5,15,12
+
+database<- select(df1,-X10dock,-X14usage_shared.bike)
+which(apply(database,2,var)==0)
+database<-database[ , which(apply(database, 2, var) != 0)]
+write.csv(database,'C:/Users/Steven SHI/Desktop/capstone/PCA.csv')
+database<-read.csv('C:/Users/Steven SHI/Desktop/capstone/PCA.csv')
+
+names(database)[1]<-'INDIV_ID'
+#database$PC1_SB = (16*database$X8attitude_NUbike1+15*database$X7usage +13*database$X19own_car+ 11*database$X6attitude_Nubike +8*database$X4attitude_bike +7*database$X15way_stop +6*database$X11mode_primary)/76
+#database$PC2_PC =(13*database$X12time_home_stop +12.5*database$X2satisfaction+11*database$X17Mdis_ride +8*database$X18Mtime_commute +6*database$X5attitude_lane +6*database$X1affiliation +5.5*database$X13usage_bike +database$X21age)/62 #12,2,17,18,5,1,13,21
+#database$PC3_BB =(23*database$X20own_bike+22.5*database$X13usage_bike+11*database$X16Mdis_walk+6*database$X11mode_primary)/62.5  #20,13,16,11
+#database$PC4_GD =(20*database$X20own_bike+16*database$X17Mdis_ride+15*database$X16Mdis_walk+10*database$X4attitude_bike+10*database$X6attitude_Nubike)/71#20,17,16,4,6
+#database$PC5_SR =(35*database$X21age+32*database$X1affiliation+10*database$X12time_home_stop)/77 #21,1,12
+#database$PC6_CS =(35*database$X18Mtime_commute+32*database$X2satisfaction+database$X5attitude_lane +10*database$X15way_stop +database$X12time_home_stop )/77
+
+database$PC1_SB = (database$X8attitude_NUbike1+database$X7usage +database$X19own_car+ database$X6attitude_Nubike +database$X4attitude_bike +database$X15way_stop +database$X11mode_primary)/7
+database$PC2_PC =(database$X12time_home_stop +database$X2satisfaction+database$X17Mdis_ride +database$X18Mtime_commute +database$X5attitude_lane +database$X1affiliation +database$X13usage_bike +database$X21age)/8 #12,2,17,18,5,1,13,21
+database$PC3_BB =(database$X20own_bike+database$X13usage_bike+database$X16Mdis_walk+database$X11mode_primary)/4 #20,13,16,11
+database$PC4_GD =(database$X20own_bike+database$X17Mdis_ride+database$X16Mdis_walk+database$X4attitude_bike+database$X6attitude_Nubike)/5#20,17,16,4,6
+database$PC5_SR =(database$X21age+database$X1affiliation+database$X12time_home_stop)/3 #21,1,12
+database$PC6_CS =(database$X18Mtime_commute+database$X2satisfaction+database$X5attitude_lane +database$X15way_stop +database$X12time_home_stop )/3
+
+#database<-select(df4,PC1_SB,PC2_PC,PC3_BH,PC4_GD,PC5_SR,PC6_CS)
+
+#PC1_SB,PC2_PC,PC3_BB,PC4_GD,PC5_SR,PC6_CS
+
+# ################################################################# #
+#### DEFINE MODEL PARAMETERS                                     ####
+# ################################################################# #
+
+### Vector of parameters, including any that are kept fixed in estimation
+
+### This is where you will define betas for additional model parameters 
+### Start with zero, then update with estimate for shorter run times (optional)
+### Make sure there is a comma at the end of each line but the last 
+
+apollo_beta = c(
+                
+                ### Alternative specific constants:
+                asc_opt_walk_bus                   = 0, 
+                asc_opt_bike_bus                    = 0,
+                asc_opt_bike_campus                 =0,
+                asc_opt_other                    =0,
+                ### Ride attributes
+                v_PC1_SB                = 0, 
+                v_PC2_PC                  =  0, 
+                v_PC3_BB                    =0,
+                v_PC4_GD                = 0,
+                v_PC5_SR                     = 0, 
+                v_PC6_CS                  =0
+                
+)
+
+### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
+apollo_fixed = c("asc_opt_other")
+
+apollo_inputs = apollo_validateInputs()
+
+# ################################################################# #
+#### DEFINE MODEL AND LIKELIHOOD FUNCTION                        ####
+# ################################################################# #
+
+
+apollo_probabilities=function(apollo_beta, apollo_inputs, functionality="estimate"){
+    apollo_attach(apollo_beta, apollo_inputs)
+    on.exit(apollo_detach(apollo_beta, apollo_inputs))
+
+  ### Create list of probabilities P
+  P = list()
+
+  ### List of utilities: these must use the same names used above, order is irrelevant
+  V = list()
+  
+  ### This is where you will add ride attributes, sociodemographics, etc.
+  V[['alt1']] = asc_opt_walk_bus +v_PC2_PC*PC2_PC
+  V[['alt2']] = asc_opt_bike_bus +v_PC1_SB*PC1_SB+ v_PC3_BB*PC3_BB +v_PC5_SR*PC5_SR+ v_PC6_CS*PC6_CS
+  V[['alt3']]=  asc_opt_bike_campus +v_PC4_GD*PC4_GD+ v_PC3_BB*PC3_BB +v_PC1_SB*PC1_SB+v_PC6_CS*PC6_CS +v_PC2_PC*PC2_PC 
+  V[['alt4']]=  asc_opt_other+ v_PC2_PC*PC2_PC
+  
+  
+  ### Define settings for MNL model component
+  mnl_settings = list(
+    alternatives  = c(alt1=1, alt2=2,alt3=3,alt4=4),
+    avail         = list(alt1=1, alt2=1,alt3=1,alt4=1),
+    choiceVar     = X9mode,
+    V             = V
+  )
+
+  ### Compute probabilities using MNL model
+  P[['model']] = apollo_mnl(mnl_settings, functionality)
+
+  ### Take product across observation for same individual
+  #P = apollo_panelProd(P, apollo_inputs, functionality)
+
+  ### Average across inter-individual draws
+  #P = apollo_avgInterDraws(P, apollo_inputs, functionality) #Uncomment line for random parameter model
+
+  ### Prepare and return outputs of function
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+  
+}
+
+# ################################################################# #
+#### MODEL ESTIMATION                                            ####
+# ################################################################# #
+
+model = apollo_estimate(apollo_beta, apollo_fixed,
+                        apollo_probabilities, 
+                        apollo_inputs,
+                        list(writeIter=FALSE)) #Comment line for random parameter model 
+                        #estimate_settings=list(hessianRoutine="maxLik")) #Uncomment line for random parameter model
+
+# ################################################################# #
+#### MODEL OUTPUTS                                               ####
+# ################################################################# #
+
+# ----------------------------------------------------------------- #
+#---- FORMATTED OUTPUT (TO SCREEN)                               ----
+# ----------------------------------------------------------------- #
+
+apollo_modelOutput(model, list(printPVal = TRUE))
+data1<-apollo_modelOutput(model, list(printPVal = TRUE))
+```
+
+
+
+
+```{r prediction}
+prediction<-apollo_prediction(
+model,
+apollo_probabilities,
+apollo_inputs,
+prediction_settings = list(),
+modelComponent = NA
+)
+summary(prediction)
+prediction
+write.csv(prediction,'C:/Users/Steven SHI/Desktop/capstone/prediction.csv')
+#write.csv(summary(prediction),'C:/Users/Steven SHI/Desktop/capstone/summary_prediction.csv')
+```
+
+
+
+
+
+
+```{r variables summary}
+PC1=database$PC1_SB
+avgPC1 =mean(database$PC1_SB )
+sdPC1 =sd(database$PC1_SB )
+minPC1 =min(database$PC1_SB )
+maxPC1 =max(database$PC1_SB )
+PC1 <-c(maxPC1 ,minPC1, avgPC1,sdPC1 )
+
+PC2=database$PC2_PC
+avgPC2 =mean(database$PC2_PC )
+sdPC2 =sd(database$PC2_PC )
+minPC2 =min(database$PC2_PC )
+maxPC2 =max(database$PC2_PC )
+PC2 <-c(maxPC2 ,minPC2, avgPC2,sdPC2 )
+
+PC3=database$PC3_BB
+avgPC3 =mean(database$PC3_BB )
+sdPC3 =sd(database$PC3_BB )
+minPC3 =min(database$PC3_BB )
+maxPC3 =max(database$PC3_BB)
+PC3 <-c(maxPC3 ,minPC3, avgPC3,sdPC3 )
+
+PC4=database$PC4_GD
+avgPC4 =mean(database$PC4_GD )
+sdPC4 =sd(database$PC4_GD )
+minPC4 =min(database$PC4_GD )
+maxPC4 =max(database$PC4_GD)
+PC4 <-c(maxPC4 ,minPC4, avgPC4,sdPC4 )
+
+PC5=database$PC5_SR
+avgPC5 =mean(database$PC5_SR )
+sdPC5=sd(database$PC5_SR )
+minPC5 =min(database$PC5_SR )
+maxPC5 =max(database$PC5_SR)
+PC5 <-c(maxPC5 ,minPC5, avgPC5,sdPC5 )
+
+PC6=database$PC6_CS
+avgPC6 =mean(database$PC6_CS )
+sdPC6=sd(database$PC6_CS )
+minPC6 =min(database$PC6_CS )
+maxPC6 =max(database$PC6_CS)
+PC6 <-c(maxPC6 ,minPC6, avgPC6,sdPC6 )
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
